@@ -1,12 +1,27 @@
 #!/usr/bin/env python
-import pika
+import serial # for Arduino communication
+import time
+import paho.mqtt.client as mqtt # for MQTT connection
 
-connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
-channel = connection.channel()
+ser = serial.Serial('/dev/ttyACM0', 9600)
+mqtt_host = "192.168.10.124"
+mqtt_topic = "dataTopic"
 
-channel.queue_declare(queue = 'data')
-channel.basic_publish(exchange = '', routing_key = 'data', body = 'Temperature: Fucking Warm')
+# mqtt setup
+client = mqtt.Client()
 
-print(" [x] Sent 'Temperature: Fucking Warm'")
+def on_connect(client, userdata, flags, rc):
+    print("Connected to: ", mqtt_host)
+    
+client.on_connect = on_connect
+client.connect(mqtt_host, 1883)
+    
+while True:
+    currentPacket = ser.readline()
+    print("Sent data...")
+    print(currentPacket)
+    client.publish(mqtt_topic, currentPacket, 0, False)
+    time.sleep(1)
 
-connection.close()
+client.loop_forever()
+client.disconnect()
