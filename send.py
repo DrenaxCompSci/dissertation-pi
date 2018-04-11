@@ -1,17 +1,27 @@
 #!/usr/bin/env python
-import pika # for RabbitMQ
 import serial # for Arduino communication
-
-connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
-channel = connection.channel()
-
-channel.queue_declare(queue = 'data')
+import time
+import paho.mqtt.client as mqtt # for MQTT connection
 
 ser = serial.Serial('/dev/ttyACM0', 9600)
+mqtt_host = "192.168.10.124"
+mqtt_topic = "dataTopic"
 
+# mqtt setup
+client = mqtt.Client()
+
+def on_connect(client, userdata, flags, rc):
+    print("Connected to: ", mqtt_host)
+    
+client.on_connect = on_connect
+client.connect(mqtt_host, 1883)
+    
 while True:
     currentPacket = ser.readline()
-    channel.basic_publish(exchange = '', routing_key = 'data', body = currentPacket)
-    print(" [x] Sent data")
+    print("Sent data...")
+    print(currentPacket)
+    client.publish(mqtt_topic, currentPacket, 0, False)
+    time.sleep(1)
 
-connection.close()
+client.loop_forever()
+client.disconnect()
